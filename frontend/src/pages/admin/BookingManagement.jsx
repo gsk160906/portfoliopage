@@ -5,13 +5,8 @@ const BookingManagement = () => {
     const [activeTab, setActiveTab] = useState('all');
     const tabs = ['all', 'pending', 'confirmed', 'in-progress', 'completed', 'cancelled'];
 
-    const bookings = [
-        { id: 'BK001', customer: 'Jane D.', service: 'Home Cleaning', provider: 'CleanPro', date: 'Jan 30', status: 'confirmed', amount: 79 },
-        { id: 'BK002', customer: 'John S.', service: 'Plumbing', provider: 'FixIt Pro', date: 'Jan 29', status: 'in-progress', amount: 69 },
-        { id: 'BK003', customer: 'Emily R.', service: 'AC Service', provider: 'CoolAir', date: 'Jan 28', status: 'completed', amount: 89 },
-        { id: 'BK004', customer: 'Mike T.', service: 'Electrical', provider: 'PowerFix', date: 'Jan 28', status: 'pending', amount: 79 },
-        { id: 'BK005', customer: 'Sarah L.', service: 'Deep Cleaning', provider: 'CleanPro', date: 'Jan 27', status: 'cancelled', amount: 99 },
-    ];
+    // Data will be populated from backend API
+    const bookings = [];
 
     const statusColors = { pending: 'warning', confirmed: 'info', 'in-progress': 'primary', completed: 'success', cancelled: 'gray' };
     const filtered = activeTab === 'all' ? bookings : bookings.filter(b => b.status === activeTab);

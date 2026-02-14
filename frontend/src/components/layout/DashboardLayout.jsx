@@ -1,4 +1,4 @@
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
     Zap,
     LayoutDashboard,
@@ -23,7 +23,8 @@ import {
     ChevronDown,
     Menu
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useAuth } from '../../context/AuthContext';
 
 // Navigation configs for different roles
 const navigationConfig = {
@@ -117,13 +118,31 @@ const DashboardLayout = ({ role }) => {
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [userMenuOpen, setUserMenuOpen] = useState(false);
     const location = useLocation();
+    const navigate = useNavigate();
+    const { userData, logout, loading: authLoading } = useAuth();
     const config = navigationConfig[role];
 
-    // Mock user data
+    useEffect(() => {
+        if (!authLoading && userData && role === 'provider' && !userData.isOnboarded) {
+            if (location.pathname !== '/provider/onboarding') {
+                navigate('/provider/onboarding');
+            }
+        }
+    }, [userData, role, navigate, location.pathname, authLoading]);
+
+    const handleLogout = async () => {
+        try {
+            await logout();
+            navigate('/login');
+        } catch (error) {
+            console.error("Logout error", error);
+        }
+    };
+
     const user = {
-        name: role === 'admin' ? 'Admin User' : role === 'provider' ? 'John Provider' : 'Jane Customer',
-        email: `${role}@servisgo.com`,
-        avatar: null
+        name: userData?.fullName || (role === 'admin' ? 'Admin User' : role === 'provider' ? 'Provider' : 'Customer'),
+        email: userData?.email || '',
+        avatar: userData?.avatar || null
     };
 
     return (
@@ -161,10 +180,10 @@ const DashboardLayout = ({ role }) => {
                 </nav>
 
                 <div style={{ marginTop: 'auto', padding: 'var(--space-4)' }}>
-                    <Link to="/" className="sidebar-link" style={{ color: 'var(--error)' }}>
+                    <button onClick={handleLogout} className="sidebar-link" style={{ color: 'var(--error)', width: '100%', background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer' }}>
                         <LogOut className="sidebar-link-icon" size={20} />
                         Logout
-                    </Link>
+                    </button>
                 </div>
             </aside>
 
@@ -186,7 +205,10 @@ const DashboardLayout = ({ role }) => {
                         {/* Notifications */}
                         <button className="btn btn-ghost btn-icon" style={{ position: 'relative' }}>
                             <Bell size={20} />
-                            <span className="notification-badge">3</span>
+                            {/* In a real app, this would come from a context or API */}
+                            {userData?.notifications?.length > 0 && (
+                                <span className="notification-badge">{userData.notifications.length}</span>
+                            )}
                         </button>
 
                         {/* User Menu */}
@@ -221,10 +243,10 @@ const DashboardLayout = ({ role }) => {
                                         Settings
                                     </Link>
                                     <hr style={{ margin: 'var(--space-2) 0', border: 'none', borderTop: '1px solid var(--gray-100)' }} />
-                                    <Link to="/" className="user-menu-item" style={{ color: 'var(--error)' }}>
+                                    <button onClick={handleLogout} className="user-menu-item" style={{ color: 'var(--error)', width: '100%', background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer' }}>
                                         <LogOut size={16} />
                                         Logout
-                                    </Link>
+                                    </button>
                                 </div>
                             )}
                         </div>

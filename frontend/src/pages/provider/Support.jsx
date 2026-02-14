@@ -1,11 +1,8 @@
 import { HelpCircle, MessageCircle, Phone, Mail, FileText, ChevronRight, ExternalLink } from 'lucide-react';
 
 const Support = () => {
-    const faqs = [
-        { q: 'How do I update my availability?', a: 'Go to Availability in the sidebar to set your working hours.' },
-        { q: 'When do I receive payments?', a: 'Payments are processed weekly every Monday to your linked bank account.' },
-        { q: 'How can I add new services?', a: 'Navigate to My Services and click Add Service to offer new services.' },
-    ];
+    // Data will be populated from backend API
+    const faqs = [];
 
     return (
         <div className="support-page">

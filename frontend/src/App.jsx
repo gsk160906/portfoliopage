@@ -1,6 +1,9 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import './index.css';
 
+// Scroll to top on navigation
+import ScrollToTop from './components/ScrollToTop';
+
 // Layout Components
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
@@ -77,6 +80,7 @@ function PublicLayout({ children }) {
 function App() {
   return (
     <Router>
+      <ScrollToTop />
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<PublicLayout><Home /></PublicLayout>} />

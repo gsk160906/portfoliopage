@@ -1,12 +1,65 @@
-import { Star, Calendar, MessageCircle } from 'lucide-react';
+import { Star, Calendar, MessageCircle, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useAuth } from '../../context/AuthContext';
+import { db } from '../../firebase/config';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 
 const Reviews = () => {
-    const stats = { average: 4.9, total: 45, breakdown: [{ stars: 5, count: 38 }, { stars: 4, count: 5 }, { stars: 3, count: 2 }, { stars: 2, count: 0 }, { stars: 1, count: 0 }] };
-    const reviews = [
-        { id: 1, customer: 'Jane D.', rating: 5, date: 'Jan 26, 2026', comment: 'Excellent service! Very thorough and professional.', service: 'Home Cleaning', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=50&h=50&fit=crop' },
-        { id: 2, customer: 'Mike R.', rating: 5, date: 'Jan 22, 2026', comment: 'Great work, arrived on time and did an amazing job!', service: 'Deep Cleaning', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=50&h=50&fit=crop' },
-        { id: 3, customer: 'Emily T.', rating: 4, date: 'Jan 18, 2026', comment: 'Good overall, just a few spots missed in the corner.', service: 'Home Cleaning', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=50&h=50&fit=crop' },
-    ];
+    const { currentUser } = useAuth();
+    const [reviews, setReviews] = useState([]);
+    const [stats, setStats] = useState({ average: 0, total: 0, breakdown: [] });
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchReviews = async () => {
+            if (!currentUser) return;
+            setLoading(true);
+            try {
+                const q = query(
+                    collection(db, 'reviews'),
+                    where('providerId', '==', currentUser.uid)
+                );
+                const snapshot = await getDocs(q);
+                const fetchedReviews = snapshot.docs.map(doc => {
+                    const data = doc.data();
+                    return {
+                        id: doc.id,
+                        ...data,
+                        customer: data.customerName || data.customer || 'Anonymous',
+                        service: data.serviceName || data.service || 'Service',
+                        date: data.createdAt?.toDate ? data.createdAt.toDate().toLocaleDateString() : (data.date || 'Recent'),
+                        avatar: data.customerAvatar || 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=100&h=100&fit=crop'
+                    };
+                });
+
+                // Calculate Stats
+                const total = fetchedReviews.length;
+                const sum = fetchedReviews.reduce((acc, r) => acc + (Number(r.rating) || 0), 0);
+                const average = total > 0 ? (sum / total).toFixed(1) : 0;
+
+                const counts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+                fetchedReviews.forEach(r => {
+                    const stars = Math.round(Number(r.rating) || 0);
+                    if (counts[stars] !== undefined) counts[stars]++;
+                });
+
+                const breakdown = [5, 4, 3, 2, 1].map(star => ({
+                    stars: star,
+                    count: counts[star]
+                }));
+
+                setReviews(fetchedReviews);
+                setStats({ average, total, breakdown });
+
+            } catch (error) {
+                console.error("Error fetching reviews:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchReviews();
+    }, [currentUser]);
 
     return (
         <div className="reviews-page">
@@ -22,7 +75,7 @@ const Reviews = () => {
                         {stats.breakdown.map(b => (
                             <div key={b.stars} className="breakdown-row">
                                 <span>{b.stars} star</span>
-                                <div className="bar"><div className="fill" style={{ width: `${(b.count / stats.total) * 100}%` }}></div></div>
+                                <div className="bar"><div className="fill" style={{ width: `${stats.total > 0 ? (b.count / stats.total) * 100 : 0}%` }}></div></div>
                                 <span>{b.count}</span>
                             </div>
                         ))}

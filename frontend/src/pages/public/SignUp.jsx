@@ -1,10 +1,83 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
-import { Eye, EyeOff, Zap, Mail, Lock, User, Check } from 'lucide-react';
+import { Eye, EyeOff, Zap, Mail, Lock, User, Check, Loader2 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { db } from '../../firebase/config';
+import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 
 const SignUp = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [role, setRole] = useState('customer');
+    const [fullName, setFullName] = useState('');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
+
+    const { signup } = useAuth();
+    const navigate = useNavigate();
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+
+        if (!fullName || !email || !password) {
+            return setError('Please fill in all fields');
+        }
+
+        if (password.length < 6) {
+            return setError('Password must be at least 6 characters');
+        }
+
+        try {
+            setError('');
+            setLoading(true);
+
+            // 1. Create user in Firebase Auth
+            const { user } = await signup(email, password);
+
+            // 2. Create user profile in Firestore
+            await setDoc(doc(db, 'users', user.uid), {
+                fullName,
+                email,
+                role,
+                createdAt: serverTimestamp(),
+                id: user.uid
+            });
+
+            // 3. Redirect based on role
+            if (role === 'provider') {
+                navigate('/provider');
+            } else {
+                navigate('/customer');
+            }
+        } catch (err) {
+            console.error(err);
+            setError(err.message || 'Failed to create an account');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleGoogleSignIn = async () => {
+        try {
+            setError('');
+            const { user } = await googleSignIn();
+            const userDoc = await getDoc(doc(db, 'users', user.uid));
+            if (!userDoc.exists()) {
+                await setDoc(doc(db, 'users', user.uid), {
+                    fullName: user.displayName,
+                    email: user.email,
+                    role: 'customer',
+                    createdAt: serverTimestamp(),
+                    id: user.uid
+                });
+            }
+            navigate('/customer');
+        } catch (err) {
+            console.error(err);
+            setError('Failed to sign in with Google');
+        }
+    };
 
     return (
         <div className="auth-page">
@@ -20,6 +93,8 @@ const SignUp = () => {
                             <p>Join ServisGo and get started today</p>
                         </div>
 
+                        {error && <div className="auth-error" style={{ color: 'var(--error)', backgroundColor: 'rgba(239, 68, 68, 0.1)', padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', marginBottom: 'var(--space-4)', fontSize: 'var(--text-sm)' }}>{error}</div>}
+
                         <div className="role-selector">
                             <button className={`role-btn ${role === 'customer' ? 'active' : ''}`} onClick={() => setRole('customer')}>
                                 <User size={20} />I need services
@@ -29,41 +104,64 @@ const SignUp = () => {
                             </button>
                         </div>
 
-                        <form className="auth-form">
+                        <form className="auth-form" onSubmit={handleSubmit}>
                             <div className="form-group">
                                 <label className="form-label">Full Name</label>
                                 <div className="input-with-icon">
                                     <User size={20} className="input-icon" />
-                                    <input type="text" className="form-input" placeholder="Enter your name" />
+                                    <input
+                                        type="text"
+                                        className="form-input"
+                                        placeholder="Enter your name"
+                                        value={fullName}
+                                        onChange={(e) => setFullName(e.target.value)}
+                                        required
+                                    />
                                 </div>
                             </div>
                             <div className="form-group">
                                 <label className="form-label">Email Address</label>
                                 <div className="input-with-icon">
                                     <Mail size={20} className="input-icon" />
-                                    <input type="email" className="form-input" placeholder="Enter your email" />
+                                    <input
+                                        type="email"
+                                        className="form-input"
+                                        placeholder="Enter your email"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        required
+                                    />
                                 </div>
                             </div>
                             <div className="form-group">
                                 <label className="form-label">Password</label>
                                 <div className="input-with-icon">
                                     <Lock size={20} className="input-icon" />
-                                    <input type={showPassword ? 'text' : 'password'} className="form-input" placeholder="Create a password" />
+                                    <input
+                                        type={showPassword ? 'text' : 'password'}
+                                        className="form-input"
+                                        placeholder="Create a password"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        required
+                                    />
                                     <button type="button" className="password-toggle" onClick={() => setShowPassword(!showPassword)}>
                                         {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                                     </button>
                                 </div>
-                                <p className="form-hint">Must be at least 8 characters</p>
+                                <p className="form-hint">Must be at least 6 characters</p>
                             </div>
                             <label className="form-checkbox">
-                                <input type="checkbox" />
+                                <input type="checkbox" required />
                                 <span>I agree to the <Link to="/terms">Terms</Link> and <Link to="/privacy">Privacy Policy</Link></span>
                             </label>
-                            <button type="submit" className="btn btn-primary btn-lg" style={{ width: '100%' }}>Create Account</button>
+                            <button type="submit" className="btn btn-primary btn-lg" style={{ width: '100%' }} disabled={loading}>
+                                {loading ? <><Loader2 size={20} className="animate-spin" /> Creating Account...</> : 'Create Account'}
+                            </button>
                         </form>
                         <div className="auth-divider"><span>or</span></div>
                         <div className="social-buttons">
-                            <button className="btn btn-secondary">Google</button>
+                            <button className="btn btn-secondary" onClick={handleGoogleSignIn}>Google</button>
                             <button className="btn btn-secondary">Facebook</button>
                         </div>
                         <p className="auth-footer">Already have an account? <Link to="/login">Sign In</Link></p>

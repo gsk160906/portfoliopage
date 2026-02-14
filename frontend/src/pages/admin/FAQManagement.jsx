@@ -4,13 +4,8 @@ import { useState } from 'react';
 const FAQManagement = () => {
     const [expandedId, setExpandedId] = useState(1);
 
-    const faqs = [
-        { id: 1, category: 'General', question: 'What is ServisGo?', answer: 'ServisGo is a platform that connects customers with verified local service providers.', order: 1 },
-        { id: 2, category: 'General', question: 'How do I create an account?', answer: 'Click on Sign Up, fill in your details, and verify your email.', order: 2 },
-        { id: 3, category: 'Booking', question: 'How do I book a service?', answer: 'Browse services, select one, pick a date and time, add your address, and pay.', order: 3 },
-        { id: 4, category: 'Payment', question: 'What payment methods do you accept?', answer: 'We accept all major credit/debit cards, PayPal, and digital wallets.', order: 4 },
-        { id: 5, category: 'Payment', question: 'What is your refund policy?', answer: 'Full refunds for cancellations 24+ hours in advance.', order: 5 },
-    ];
+    // Data will be populated from backend API
+    const faqs = [];
 
     return (
         <div className="faq-management-page">

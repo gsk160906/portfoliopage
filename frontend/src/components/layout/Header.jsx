@@ -1,19 +1,34 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import {
     Menu,
     X,
     ChevronDown,
     Search,
-    Zap
+    Zap,
+    User,
+    LogOut
 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 const Header = () => {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [servicesDropdownOpen, setServicesDropdownOpen] = useState(false);
+    const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+    const { currentUser, userData, logout } = useAuth();
     const location = useLocation();
+    const navigate = useNavigate();
 
     const isActive = (path) => location.pathname === path;
+
+    const handleLogout = async () => {
+        try {
+            await logout();
+            navigate('/');
+        } catch (error) {
+            console.error("Logout error", error);
+        }
+    };
 
     const serviceCategories = [
         { name: 'All Services', path: '/services' },
@@ -102,13 +117,39 @@ const Header = () => {
                         <button className="btn btn-icon btn-ghost" aria-label="Search">
                             <Search size={20} />
                         </button>
-                        <Link to="/login" className="btn btn-ghost">
-                            Login
-                        </Link>
-                        <Link to="/signup" className="btn btn-primary">
-                            Sign Up
-                        </Link>
 
+                        {currentUser ? (
+                            <div
+                                className="nav-dropdown"
+                                onMouseEnter={() => setUserDropdownOpen(true)}
+                                onMouseLeave={() => setUserDropdownOpen(false)}
+                            >
+                                <button className="btn btn-ghost flex items-center gap-2">
+                                    <User size={20} />
+                                    <span>{userData?.fullName?.split(' ')[0] || 'Account'}</span>
+                                    <ChevronDown size={16} />
+                                </button>
+                                <div className={`nav-dropdown-menu ${userDropdownOpen ? 'open' : ''}`} style={{ right: 0, left: 'auto' }}>
+                                    <Link to={userData?.role === 'provider' ? '/provider' : '/customer'} className="nav-dropdown-item">Dashboard</Link>
+                                    <Link to={userData?.role === 'provider' ? '/provider/profile' : '/customer/profile'} className="nav-dropdown-item">Profile</Link>
+                                    <Link to={userData?.role === 'provider' ? '/provider/jobs' : '/customer/bookings'} className="nav-dropdown-item">
+                                        {userData?.role === 'provider' ? 'My Jobs' : 'My Bookings'}
+                                    </Link>
+                                    <button onClick={handleLogout} className="nav-dropdown-item text-error w-full text-left flex items-center gap-2">
+                                        <LogOut size={16} /> Logout
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <>
+                                <Link to="/login" className="btn btn-ghost">
+                                    Login
+                                </Link>
+                                <Link to="/signup" className="btn btn-primary">
+                                    Sign Up
+                                </Link>
+                            </>
+                        )}
                         {/* Mobile Menu Button */}
                         <button
                             className="mobile-menu-btn btn btn-ghost"

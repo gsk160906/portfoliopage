@@ -1,17 +1,63 @@
 import { Link } from 'react-router-dom';
-import { Calendar, Clock, MapPin, ArrowRight, CreditCard, Bell, Star, CheckCircle } from 'lucide-react';
+import { Calendar, Clock, MapPin, ArrowRight, CreditCard, Bell, Star, CheckCircle, Search, Loader2 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { useState, useEffect } from 'react';
+import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
+import { db } from '../../firebase/config';
 
 const CustomerDashboard = () => {
-    const stats = [
-        { label: 'Total Bookings', value: '12', color: 'var(--primary-600)' },
-        { label: 'Upcoming', value: '2', color: 'var(--accent-orange)' },
-        { label: 'Completed', value: '10', color: 'var(--success)' },
-    ];
+    const { userData, currentUser } = useAuth();
+    const [stats, setStats] = useState([
+        { label: 'Total Bookings', value: '0', color: 'var(--primary-600)' },
+        { label: 'Upcoming', value: '0', color: 'var(--accent-orange)' },
+        { label: 'Completed', value: '0', color: 'var(--success)' },
+    ]);
+    const [upcomingBookings, setUpcomingBookings] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    const upcomingBookings = [
-        { id: 1, service: 'Home Cleaning', provider: 'CleanPro Services', date: 'Jan 30, 2026', time: '10:00 AM', status: 'Confirmed', image: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=100&h=100&fit=crop' },
-        { id: 2, service: 'AC Service', provider: 'CoolAir Experts', date: 'Feb 2, 2026', time: '2:00 PM', status: 'Pending', image: 'https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=100&h=100&fit=crop' },
-    ];
+    useEffect(() => {
+        const fetchDashboardData = async () => {
+            if (!currentUser) return;
+
+            try {
+                const bookingsRef = collection(db, 'bookings');
+                const q = query(bookingsRef, where('userId', '==', currentUser.uid));
+                const snapshot = await getDocs(q);
+
+                // Map and sort all bookings in memory
+                const allBookings = snapshot.docs
+                    .map(doc => ({ id: doc.id, ...doc.data() }))
+                    .sort((a, b) => {
+                        const timeA = a.createdAt?.seconds || 0;
+                        const timeB = b.createdAt?.seconds || 0;
+                        return timeB - timeA;
+                    });
+
+                // Calculate stats based on real status values
+                const total = allBookings.length;
+                const upcoming = allBookings.filter(b => b.status === 'upcoming' || b.status === 'pending').length;
+                const completed = allBookings.filter(b => b.status === 'completed').length;
+
+                setStats([
+                    { label: 'Total Bookings', value: total.toString(), color: 'var(--primary-600)' },
+                    { label: 'Upcoming', value: upcoming.toString(), color: 'var(--accent-orange)' },
+                    { label: 'Completed', value: completed.toString(), color: 'var(--success)' },
+                ]);
+
+                const filteredUpcoming = allBookings
+                    .filter(b => b.status === 'upcoming' || b.status === 'pending')
+                    .slice(0, 3);
+                setUpcomingBookings(filteredUpcoming);
+
+            } catch (error) {
+                console.error("Error fetching dashboard data:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchDashboardData();
+    }, [currentUser]);
 
     const quickActions = [
         { icon: Calendar, label: 'Book Service', link: '/customer/book-service' },
@@ -24,8 +70,8 @@ const CustomerDashboard = () => {
         <div className="dashboard-page">
             <div className="welcome-section">
                 <div>
-                    <h1>Welcome back, Jane!</h1>
-                    <p>Here's an overview of your account</p>
+                    <h1>Welcome back, {userData?.fullName?.split(' ')[0] || 'User'}!</h1>
+                    <p>Here's what's happening with your account</p>
                 </div>
                 <Link to="/customer/book-service" className="btn btn-primary">
                     Book a Service <ArrowRight size={18} />
@@ -49,26 +95,31 @@ const CustomerDashboard = () => {
                             <Link to="/customer/bookings" className="btn btn-ghost btn-sm">View All</Link>
                         </div>
                         <div className="bookings-list">
-                            {upcomingBookings.map(booking => (
-                                <Link key={booking.id} to={`/customer/bookings/${booking.id}`} className="booking-item">
-                                    <img src={booking.image} alt={booking.service} className="booking-image" />
-                                    <div className="booking-info">
-                                        <h4>{booking.service}</h4>
-                                        <p>{booking.provider}</p>
-                                        <div className="booking-meta">
-                                            <span><Calendar size={14} /> {booking.date}</span>
-                                            <span><Clock size={14} /> {booking.time}</span>
+                            {loading ? (
+                                <div style={{ textAlign: 'center', padding: '2rem' }}><Loader2 size={32} className="animate-spin" /></div>
+                            ) : upcomingBookings.length > 0 ? (
+                                upcomingBookings.map(booking => (
+                                    <Link key={booking.id} to={`/customer/bookings/${booking.id}`} className="booking-item">
+                                        <div className="booking-icon-placeholder">
+                                            <Calendar size={24} />
                                         </div>
-                                    </div>
-                                    <span className={`badge ${booking.status === 'Confirmed' ? 'badge-success' : 'badge-warning'}`}>
-                                        {booking.status}
-                                    </span>
-                                </Link>
-                            ))}
-                            {upcomingBookings.length === 0 && (
+                                        <div className="booking-info">
+                                            <h4>{booking.serviceName}</h4>
+                                            <div className="booking-meta">
+                                                <span><Calendar size={14} /> {booking.date}</span>
+                                                <span><Clock size={14} /> {booking.time}</span>
+                                            </div>
+                                        </div>
+                                        <span className={`badge ${booking.status === 'upcoming' ? 'badge-success' : 'badge-warning'}`}>
+                                            {booking.status}
+                                        </span>
+                                    </Link>
+                                ))
+                            ) : (
                                 <div className="empty-state">
-                                    <p>No upcoming bookings</p>
-                                    <Link to="/customer/book-service" className="btn btn-primary btn-sm">Book Now</Link>
+                                    <div className="empty-icon"><Calendar size={48} /></div>
+                                    <p>No upcoming bookings found.</p>
+                                    <Link to="/customer/book-service" className="btn btn-primary btn-sm">Book Your First Service</Link>
                                 </div>
                             )}
                         </div>
@@ -89,21 +140,23 @@ const CustomerDashboard = () => {
                     </div>
 
                     <div className="card">
-                        <h3 className="card-title" style={{ marginBottom: 'var(--space-4)' }}>Recent Activity</h3>
-                        <div className="activity-list">
-                            <div className="activity-item">
-                                <CheckCircle size={16} className="text-success" />
-                                <span>Booking #1234 completed</span>
-                            </div>
-                            <div className="activity-item">
-                                <Star size={16} className="text-warning" />
-                                <span>You rated CleanPro 5 stars</span>
-                            </div>
-                            <div className="activity-item">
-                                <Bell size={16} className="text-primary" />
-                                <span>Payment received</span>
-                            </div>
+                        <h3 className="card-title" style={{ marginBottom: 'var(--space-4)' }}>Account Status</h3>
+                        <div className="status-item">
+                            <CheckCircle size={18} color="var(--success)" />
+                            <span>Email Verified</span>
                         </div>
+                        {userData?.phone && (
+                            <div className="status-item">
+                                <CheckCircle size={18} color="var(--success)" />
+                                <span>Phone Linked</span>
+                            </div>
+                        )}
+                        {!userData?.address && (
+                            <Link to="/customer/profile" className="status-item warning">
+                                <ArrowRight size={18} />
+                                <span>Complete Profile</span>
+                            </Link>
+                        )}
                     </div>
                 </div>
             </div>
@@ -121,22 +174,22 @@ const CustomerDashboard = () => {
         .bookings-list { display: flex; flex-direction: column; gap: var(--space-4); }
         .booking-item { display: flex; align-items: center; gap: var(--space-4); padding: var(--space-4); background: var(--gray-50); border-radius: var(--radius-lg); }
         .booking-item:hover { background: var(--gray-100); }
-        .booking-image { width: 64px; height: 64px; border-radius: var(--radius-lg); object-fit: cover; }
+        .booking-icon-placeholder { width: 48px; height: 48px; background: var(--primary-50); color: var(--primary-600); border-radius: var(--radius-lg); display: flex; align-items: center; justify-content: center; }
         .booking-info { flex: 1; }
         .booking-info h4 { font-size: var(--text-base); margin-bottom: var(--space-1); }
-        .booking-info p { font-size: var(--text-sm); color: var(--gray-500); margin-bottom: var(--space-2); }
         .booking-meta { display: flex; gap: var(--space-4); font-size: var(--text-sm); color: var(--gray-500); }
         .booking-meta span { display: flex; align-items: center; gap: var(--space-1); }
         .sidebar-content { display: flex; flex-direction: column; gap: var(--space-6); }
         .quick-actions { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
         .quick-action { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); padding: var(--space-4); background: var(--gray-50); border-radius: var(--radius-lg); font-size: var(--text-sm); font-weight: var(--font-medium); color: var(--gray-700); }
         .quick-action:hover { background: var(--primary-50); color: var(--primary-600); }
-        .activity-list { display: flex; flex-direction: column; gap: var(--space-3); }
-        .activity-item { display: flex; align-items: center; gap: var(--space-3); font-size: var(--text-sm); color: var(--gray-600); }
-        .text-success { color: var(--success); }
-        .text-warning { color: var(--accent-yellow); }
-        .text-primary { color: var(--primary-600); }
-        .empty-state { text-align: center; padding: var(--space-8); }
+        .status-item { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) 0; font-size: var(--text-sm); color: var(--gray-600); }
+        .status-item.warning { color: var(--primary-600); font-weight: var(--font-medium); }
+        .empty-state { text-align: center; padding: var(--space-12); background: var(--gray-50); border-radius: var(--radius-xl); border: 2px dashed var(--gray-200); }
+        .empty-icon { color: var(--gray-300); margin-bottom: var(--space-4); display: flex; justify-content: center; }
+        .empty-state p { color: var(--gray-500); margin-bottom: var(--space-6); }
+        .animate-spin { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         @media (max-width: 1024px) { .dashboard-grid { grid-template-columns: 1fr; } }
         @media (max-width: 768px) { .stats-row { grid-template-columns: 1fr; } .welcome-section { flex-direction: column; gap: var(--space-4); text-align: center; } }
       `}</style>

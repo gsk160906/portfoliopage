@@ -1,9 +1,86 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
-import { Eye, EyeOff, Zap, Mail, Lock, User, ArrowRight, Check } from 'lucide-react';
+import { Eye, EyeOff, Zap, Mail, Lock, User, ArrowRight, Check, Loader2 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { db } from '../../firebase/config';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 const Login = () => {
     const [showPassword, setShowPassword] = useState(false);
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
+
+    const { login, googleSignIn } = useAuth();
+    const navigate = useNavigate();
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+
+        if (!email || !password) {
+            return setError('Please fill in all fields');
+        }
+
+        try {
+            setError('');
+            setLoading(true);
+            const { user } = await login(email, password);
+
+            // Fetch user role from Firestore
+            const userDoc = await getDoc(doc(db, 'users', user.uid));
+            if (userDoc.exists()) {
+                const userData = userDoc.data();
+                if (userData.role === 'provider') {
+                    navigate('/provider');
+                } else if (userData.role === 'admin') {
+                    navigate('/admin');
+                } else {
+                    navigate('/customer');
+                }
+            } else {
+                navigate('/customer');
+            }
+        } catch (err) {
+            console.error('❌ Error during sign in:', err);
+            setError('Failed to sign in. Please check your credentials.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleGoogleSignIn = async () => {
+        try {
+            setError('');
+            const { user } = await googleSignIn();
+
+            // Check if user exists in Firestore, if not create profile
+            const userDoc = await getDoc(doc(db, 'users', user.uid));
+            if (!userDoc.exists()) {
+                // For Google sign in, default role is customer
+                await setDoc(doc(db, 'users', user.uid), {
+                    fullName: user.displayName,
+                    email: user.email,
+                    role: 'customer',
+                    createdAt: serverTimestamp(),
+                    id: user.uid
+                });
+                navigate('/customer');
+            } else {
+                const userData = userDoc.data();
+                if (userData.role === 'provider') {
+                    navigate('/provider');
+                } else if (userData.role === 'admin') {
+                    navigate('/admin');
+                } else {
+                    navigate('/customer');
+                }
+            }
+        } catch (err) {
+            console.error(err);
+            setError('Failed to sign in with Google');
+        }
+    };
 
     return (
         <div className="auth-page">
@@ -18,12 +95,22 @@ const Login = () => {
                             <h1>Welcome Back</h1>
                             <p>Sign in to your account to continue</p>
                         </div>
-                        <form className="auth-form">
+
+                        {error && <div className="auth-error" style={{ color: 'var(--error)', backgroundColor: 'rgba(239, 68, 68, 0.1)', padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', marginBottom: 'var(--space-4)', fontSize: 'var(--text-sm)' }}>{error}</div>}
+
+                        <form className="auth-form" onSubmit={handleSubmit}>
                             <div className="form-group">
                                 <label className="form-label">Email Address</label>
                                 <div className="input-with-icon">
                                     <Mail size={20} className="input-icon" />
-                                    <input type="email" className="form-input" placeholder="Enter your email" />
+                                    <input
+                                        type="email"
+                                        className="form-input"
+                                        placeholder="Enter your email"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        required
+                                    />
                                 </div>
                             </div>
                             <div className="form-group">
@@ -33,18 +120,27 @@ const Login = () => {
                                 </div>
                                 <div className="input-with-icon">
                                     <Lock size={20} className="input-icon" />
-                                    <input type={showPassword ? 'text' : 'password'} className="form-input" placeholder="Enter your password" />
+                                    <input
+                                        type={showPassword ? 'text' : 'password'}
+                                        className="form-input"
+                                        placeholder="Enter your password"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        required
+                                    />
                                     <button type="button" className="password-toggle" onClick={() => setShowPassword(!showPassword)}>
                                         {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                                     </button>
                                 </div>
                             </div>
                             <label className="form-checkbox"><input type="checkbox" /><span>Remember me</span></label>
-                            <button type="submit" className="btn btn-primary btn-lg" style={{ width: '100%' }}>Sign In</button>
+                            <button type="submit" className="btn btn-primary btn-lg" style={{ width: '100%' }} disabled={loading}>
+                                {loading ? <><Loader2 size={20} className="animate-spin" /> Signing In...</> : 'Sign In'}
+                            </button>
                         </form>
                         <div className="auth-divider"><span>or continue with</span></div>
                         <div className="social-buttons">
-                            <button className="btn btn-secondary">Google</button>
+                            <button className="btn btn-secondary" onClick={handleGoogleSignIn}>Google</button>
                             <button className="btn btn-secondary">Facebook</button>
                         </div>
                         <p className="auth-footer">Don't have an account? <Link to="/signup">Sign Up</Link></p>

@@ -8,18 +8,8 @@ const FAQ = () => {
 
     const categories = ['all', 'general', 'booking', 'payment', 'providers'];
 
-    const faqs = [
-        { category: 'general', question: 'What is ServisGo?', answer: 'ServisGo is a platform that connects customers with verified local service providers for home services like cleaning, plumbing, electrical work, and more.' },
-        { category: 'general', question: 'How do I create an account?', answer: 'Click on the "Sign Up" button, fill in your details, and verify your email. You can also sign up using Google or Facebook.' },
-        { category: 'booking', question: 'How do I book a service?', answer: 'Browse our services, select the one you need, pick a date and time, add your address, and complete the payment. It\'s that simple!' },
-        { category: 'booking', question: 'Can I reschedule my booking?', answer: 'Yes, you can reschedule up to 24 hours before your appointment through your dashboard at no extra cost.' },
-        { category: 'booking', question: 'How do I cancel a booking?', answer: 'Go to "My Bookings", select the booking, and click "Cancel". Free cancellation is available up to 24 hours before the appointment.' },
-        { category: 'payment', question: 'What payment methods do you accept?', answer: 'We accept all major credit/debit cards, PayPal, and digital wallets. All payments are secure and encrypted.' },
-        { category: 'payment', question: 'When am I charged for a service?', answer: 'Payment is processed when you confirm your booking. The amount is held and released to the provider after service completion.' },
-        { category: 'payment', question: 'What is your refund policy?', answer: 'Full refunds are available for cancellations made 24+ hours in advance. Partial refunds may apply for later cancellations.' },
-        { category: 'providers', question: 'How are providers verified?', answer: 'All providers undergo background checks, skill verification, and must maintain high ratings to stay on our platform.' },
-        { category: 'providers', question: 'Can I request a specific provider?', answer: 'Yes, if you\'ve worked with a provider before, you can request them for future bookings through the app.' },
-    ];
+    // Data will be populated from backend API
+    const faqs = [];
 
     const filteredFaqs = faqs.filter(faq =>
         (activeCategory === 'all' || faq.category === activeCategory) &&

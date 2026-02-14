@@ -1,62 +1,97 @@
 import { Link } from 'react-router-dom';
-import { Calendar, Star, DollarSign, Filter } from 'lucide-react';
-import { useState } from 'react';
+import { Calendar, Clock, MapPin, CheckCircle, Search, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useAuth } from '../../context/AuthContext';
+import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { db } from '../../firebase/config';
 
 const CompletedJobs = () => {
-    const jobs = [
-        { id: 1, service: 'Home Cleaning', customer: 'Sarah M.', date: 'Jan 25, 2026', amount: 79, rating: 5 },
-        { id: 2, service: 'Deep Cleaning', customer: 'Mike R.', date: 'Jan 22, 2026', amount: 99, rating: 5 },
-        { id: 3, service: 'Office Cleaning', customer: 'Tech Co', date: 'Jan 20, 2026', amount: 149, rating: 4 },
-        { id: 4, service: 'Home Cleaning', customer: 'Emily T.', date: 'Jan 18, 2026', amount: 79, rating: 5 },
-        { id: 5, service: 'Move-out Cleaning', customer: 'John D.', date: 'Jan 15, 2026', amount: 129, rating: null },
-    ];
+    const { currentUser } = useAuth();
+    const [jobs, setJobs] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    const totalEarnings = jobs.reduce((sum, j) => sum + j.amount, 0);
+    useEffect(() => {
+        const fetchCompletedJobs = async () => {
+            if (!currentUser) return;
+            setLoading(true);
+            try {
+                const q = query(
+                    collection(db, 'bookings'),
+                    where('providerId', '==', currentUser.uid),
+                    where('status', '==', 'completed')
+                );
+                const snapshot = await getDocs(q);
+                const fetchedJobs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                // Sort client-side to avoid compound index requirement
+                fetchedJobs.sort((a, b) => {
+                    const timeA = a.createdAt?.seconds || 0;
+                    const timeB = b.createdAt?.seconds || 0;
+                    return timeB - timeA;
+                });
+                setJobs(fetchedJobs);
+            } catch (error) {
+                console.error("Error fetching completed jobs:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchCompletedJobs();
+    }, [currentUser]);
 
     return (
         <div className="completed-jobs-page">
-            <div className="page-header">
-                <div><h1>Completed Jobs</h1><p>Your job history</p></div>
-                <div className="header-stats"><DollarSign size={20} /> Total: <strong>${totalEarnings}</strong></div>
-            </div>
+            <div className="page-header"><h1>Completed Jobs</h1><p>View your past work and history</p></div>
 
             <div className="jobs-list">
-                {jobs.map(job => (
-                    <Link key={job.id} to={`/provider/jobs/${job.id}`} className="card job-card">
-                        <div className="job-info">
-                            <h4>{job.service}</h4>
-                            <p>{job.customer}</p>
-                            <span className="job-date"><Calendar size={14} /> {job.date}</span>
+                {loading ? (
+                    <div style={{ textAlign: 'center', padding: '4rem' }}><Loader2 className="animate-spin" size={40} /></div>
+                ) : jobs.map(job => (
+                    <div key={job.id} className="card job-card">
+                        <div className="job-main">
+                            <div className="job-icon" style={{ background: 'var(--success-light)', color: 'var(--success)' }}><CheckCircle size={24} /></div>
+                            <div className="job-details">
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <h3>{job.serviceName}</h3>
+                                    <span className="badge badge-success">Completed</span>
+                                </div>
+                                <p className="customer">{job.customerName}</p>
+                                <div className="job-meta">
+                                    <span><Calendar size={14} /> {job.date}</span>
+                                    <span><Clock size={14} /> {job.time}</span>
+                                    <span><MapPin size={14} /> {job.address}</span>
+                                </div>
+                            </div>
+                            <div className="job-price">${job.price}</div>
                         </div>
-                        <div className="job-stats">
-                            {job.rating ? (
-                                <div className="rating"><Star size={16} fill="#FBBF24" color="#FBBF24" /> {job.rating}.0</div>
-                            ) : (
-                                <span className="badge badge-gray">Not rated</span>
-                            )}
-                            <span className="amount">${job.amount}</span>
-                        </div>
-                    </Link>
+                    </div>
                 ))}
+                {!loading && jobs.length === 0 && (
+                    <div className="empty-state">
+                        <p>No completed jobs yet. Keep working!</p>
+                        <Link to="/provider" className="btn btn-primary btn-sm" style={{ marginTop: '1rem' }}>Back to Dashboard</Link>
+                    </div>
+                )}
             </div>
 
             <style>{`
         .completed-jobs-page { max-width: 900px; margin: 0 auto; }
-        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-6); }
+        .page-header { margin-bottom: var(--space-6); }
         .page-header h1 { font-size: var(--text-2xl); margin-bottom: var(--space-1); }
         .page-header p { color: var(--gray-500); }
-        .header-stats { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-lg); color: var(--gray-600); }
-        .header-stats strong { color: var(--primary-600); }
-        .jobs-list { display: flex; flex-direction: column; gap: var(--space-3); }
-        .job-card { display: flex; justify-content: space-between; align-items: center; padding: var(--space-4); }
-        .job-card:hover { border-color: var(--primary-300); }
-        .job-info h4 { margin-bottom: var(--space-1); }
-        .job-info p { font-size: var(--text-sm); color: var(--gray-600); margin-bottom: var(--space-1); }
-        .job-date { font-size: var(--text-sm); color: var(--gray-400); display: flex; align-items: center; gap: var(--space-1); }
-        .job-stats { text-align: right; }
-        .rating { display: flex; align-items: center; gap: var(--space-1); font-weight: var(--font-semibold); margin-bottom: var(--space-1); }
-        .amount { font-size: var(--text-xl); font-weight: var(--font-bold); color: var(--primary-600); }
-        @media (max-width: 768px) { .page-header { flex-direction: column; gap: var(--space-4); align-items: flex-start; } }
+        .jobs-list { display: flex; flex-direction: column; gap: var(--space-4); }
+        .job-card { padding: var(--space-4); border-left: 4px solid var(--success); }
+        .job-main { display: flex; align-items: center; gap: var(--space-4); }
+        .job-icon { width: 48px; height: 48px; border-radius: var(--radius-lg); display: flex; align-items: center; justify-content: center; }
+        .job-details { flex: 1; }
+        .job-details h3 { font-size: var(--text-lg); margin-bottom: var(--space-1); }
+        .job-details .customer { color: var(--gray-600); margin-bottom: var(--space-2); font-size: var(--text-sm); }
+        .job-meta { display: flex; flex-wrap: wrap; gap: var(--space-4); font-size: var(--text-sm); color: var(--gray-500); }
+        .job-meta span { display: flex; align-items: center; gap: var(--space-1); }
+        .job-price { font-size: var(--text-xl); font-weight: var(--font-bold); color: var(--gray-900); padding: 0 var(--space-4); }
+        .empty-state { text-align: center; padding: var(--space-12); color: var(--gray-500); background: var(--gray-50); border-radius: var(--radius-xl); border: 2px dashed var(--gray-200); }
+        .animate-spin { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
       `}</style>
         </div>
     );

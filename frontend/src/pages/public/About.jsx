@@ -2,11 +2,12 @@ import { Link } from 'react-router-dom';
 import { Target, Heart, Users, Award, CheckCircle } from 'lucide-react';
 
 const About = () => {
+    // Data will be populated from backend API
     const stats = [
-        { value: '50K+', label: 'Happy Customers' },
-        { value: '1000+', label: 'Service Providers' },
-        { value: '100+', label: 'Service Types' },
-        { value: '4.9', label: 'Average Rating' },
+        { value: '0', label: 'Happy Customers' },
+        { value: '0', label: 'Service Providers' },
+        { value: '0', label: 'Service Types' },
+        { value: '-', label: 'Average Rating' },
     ];
 
     const values = [
@@ -16,11 +17,8 @@ const About = () => {
         { icon: Award, title: 'Excellence', description: 'We strive for excellence in every service delivered.' },
     ];
 
-    const team = [
-        { name: 'John Smith', role: 'CEO & Founder', image: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=200&h=200&fit=crop' },
-        { name: 'Sarah Johnson', role: 'COO', image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop' },
-        { name: 'Michael Chen', role: 'CTO', image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop' },
-    ];
+    // Team data will be populated from backend API
+    const team = [];
 
     return (
         <div className="about-page">

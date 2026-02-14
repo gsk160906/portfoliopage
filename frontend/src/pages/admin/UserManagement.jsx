@@ -5,13 +5,8 @@ const UserManagement = () => {
     const [activeTab, setActiveTab] = useState('all');
     const tabs = ['all', 'customers', 'providers', 'admins'];
 
-    const users = [
-        { id: 1, name: 'Jane Doe', email: 'jane@email.com', role: 'customer', status: 'active', joined: 'Jan 15, 2026' },
-        { id: 2, name: 'John Provider', email: 'john@provider.com', role: 'provider', status: 'active', joined: 'Jan 10, 2026', verified: true },
-        { id: 3, name: 'Mike Smith', email: 'mike@email.com', role: 'customer', status: 'inactive', joined: 'Jan 5, 2026' },
-        { id: 4, name: 'Sarah Pro', email: 'sarah@provider.com', role: 'provider', status: 'pending', joined: 'Jan 2, 2026', verified: false },
-        { id: 5, name: 'Admin User', email: 'admin@servisgo.com', role: 'admin', status: 'active', joined: 'Dec 1, 2025' },
-    ];
+    // Data will be populated from backend API
+    const users = [];
 
     const filteredUsers = activeTab === 'all' ? users : users.filter(u => u.role === activeTab.slice(0, -1));
 

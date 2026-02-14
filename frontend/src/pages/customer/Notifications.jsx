@@ -1,13 +1,9 @@
 import { Bell, CheckCircle, Calendar, Star, CreditCard, AlertCircle } from 'lucide-react';
+import { useState } from 'react';
 
 const Notifications = () => {
-    const notifications = [
-        { id: 1, type: 'booking', icon: Calendar, title: 'Booking Confirmed', message: 'Your Home Cleaning is scheduled for Jan 30 at 10:00 AM', time: '2 hours ago', read: false },
-        { id: 2, type: 'payment', icon: CreditCard, title: 'Payment Successful', message: 'Payment of $84 for Home Cleaning was successful', time: '2 hours ago', read: false },
-        { id: 3, type: 'reminder', icon: Bell, title: 'Service Reminder', message: 'Your AC Service is scheduled for tomorrow at 2:00 PM', time: '1 day ago', read: true },
-        { id: 4, type: 'review', icon: Star, title: 'Leave a Review', message: 'How was your Plumbing service? Share your experience!', time: '3 days ago', read: true },
-        { id: 5, type: 'completed', icon: CheckCircle, title: 'Service Completed', message: 'Your Electrical repair has been completed', time: '1 week ago', read: true },
-    ];
+    // Data will be populated from backend API
+    const [notifications] = useState([]);
 
     const unreadCount = notifications.filter(n => !n.read).length;
 
@@ -15,7 +11,7 @@ const Notifications = () => {
         <div className="notifications-page">
             <div className="page-header">
                 <div><h1>Notifications</h1><p>{unreadCount} unread notifications</p></div>
-                <button className="btn btn-ghost">Mark all as read</button>
+                {notifications.length > 0 && <button className="btn btn-ghost">Mark all as read</button>}
             </div>
 
             <div className="notifications-list">
@@ -30,6 +26,12 @@ const Notifications = () => {
                         {!notif.read && <div className="unread-dot"></div>}
                     </div>
                 ))}
+                {notifications.length === 0 && (
+                    <div className="empty-state-card" style={{ textAlign: 'center', padding: 'var(--space-12)', background: 'var(--gray-50)', borderRadius: 'var(--radius-xl)', border: '2px dashed var(--gray-200)' }}>
+                        <Bell size={48} style={{ margin: '0 auto var(--space-4)', color: 'var(--gray-300)' }} />
+                        <p style={{ color: 'var(--gray-500)' }}>No notifications to show. We'll alert you here when something important happens.</p>
+                    </div>
+                )}
             </div>
 
             <style>{`

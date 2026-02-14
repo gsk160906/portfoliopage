@@ -2,23 +2,17 @@ import { Link } from 'react-router-dom';
 import { Users, Briefcase, Calendar, DollarSign, TrendingUp, ArrowUpRight, AlertCircle } from 'lucide-react';
 
 const AdminDashboard = () => {
+    // Data will be populated from backend API
     const stats = [
-        { label: 'Total Users', value: '12,450', change: '+5%', icon: Users, color: 'var(--primary-600)' },
-        { label: 'Active Providers', value: '1,024', change: '+8%', icon: Briefcase, color: 'var(--accent-cyan)' },
-        { label: 'Bookings Today', value: '342', change: '+12%', icon: Calendar, color: 'var(--accent-orange)' },
-        { label: 'Revenue (MTD)', value: '$48,500', change: '+15%', icon: DollarSign, color: 'var(--success)' },
+        { label: 'Total Users', value: '0', change: '-', icon: Users, color: 'var(--primary-600)' },
+        { label: 'Active Providers', value: '0', change: '-', icon: Briefcase, color: 'var(--accent-cyan)' },
+        { label: 'Bookings Today', value: '0', change: '-', icon: Calendar, color: 'var(--accent-orange)' },
+        { label: 'Revenue (MTD)', value: '$0', change: '-', icon: DollarSign, color: 'var(--success)' },
     ];
 
-    const recentBookings = [
-        { id: 1, customer: 'Jane D.', service: 'Home Cleaning', provider: 'CleanPro', status: 'completed', amount: 79 },
-        { id: 2, customer: 'John S.', service: 'Plumbing', provider: 'FixIt Pro', status: 'in-progress', amount: 69 },
-        { id: 3, customer: 'Emily R.', service: 'AC Service', provider: 'CoolAir', status: 'pending', amount: 89 },
-    ];
+    const recentBookings = [];
 
-    const alerts = [
-        { type: 'warning', message: '5 provider verifications pending review' },
-        { type: 'info', message: '12 new customer reviews need moderation' },
-    ];
+    const alerts = [];
 
     return (
         <div className="admin-dashboard">
@@ -67,7 +61,7 @@ const AdminDashboard = () => {
                 </div>
                 <div className="card">
                     <h3>Quick Stats</h3>
-                    <div className="chart-placeholder"><TrendingUp size={48} /><p>Revenue trending up 15%</p></div>
+                    <div className="chart-placeholder"><TrendingUp size={48} /><p>No revenue data yet</p></div>
                 </div>
             </div>
 

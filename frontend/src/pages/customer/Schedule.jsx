@@ -1,17 +1,46 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Clock } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const Schedule = () => {
-    const [selectedDate, setSelectedDate] = useState(15);
-    const [selectedTime, setSelectedTime] = useState('10:00 AM');
+    const location = useLocation();
+    const { service, provider } = location.state || {};
 
-    const dates = Array.from({ length: 7 }, (_, i) => ({ day: 13 + i, weekday: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i] }));
+    const [selectedDate, setSelectedDate] = useState(null);
+    const [selectedTime, setSelectedTime] = useState('10:00 AM');
+    const [dates, setDates] = useState([]);
+
     const times = ['9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM'];
+
+    useEffect(() => {
+        // Generate next 7 days
+        const generatedDates = [];
+        const today = new Date();
+        const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+        for (let i = 0; i < 7; i++) {
+            const date = new Date();
+            date.setDate(today.getDate() + i);
+            generatedDates.push({
+                fullDate: date.toISOString().split('T')[0],
+                day: date.getDate(),
+                weekday: weekdays[date.getDay()],
+                month: date.toLocaleString('default', { month: 'long' }),
+                year: date.getFullYear()
+            });
+        }
+        setDates(generatedDates);
+        setSelectedDate(generatedDates[0].fullDate);
+    }, []);
+
+    const currentMonthYear = dates.length > 0 ? `${dates[0].month} ${dates[0].year}` : '';
 
     return (
         <div className="schedule-page">
-            <div className="page-header"><h1>Select Date & Time</h1><p>Choose when you want the service</p></div>
+            <div className="page-header">
+                <h1>Select Date & Time</h1>
+                <p>Choose when you want the {service?.name || 'service'}</p>
+            </div>
 
             <div className="steps-indicator">
                 <div className="step completed"><span>✓</span>Select Service</div>
@@ -22,10 +51,18 @@ const Schedule = () => {
 
             <div className="card schedule-card">
                 <h3>Select Date</h3>
-                <div className="date-nav"><button className="btn btn-icon btn-ghost"><ChevronLeft size={20} /></button><span>January 2026</span><button className="btn btn-icon btn-ghost"><ChevronRight size={20} /></button></div>
+                <div className="date-nav">
+                    <button className="btn btn-icon btn-ghost"><ChevronLeft size={20} /></button>
+                    <span>{currentMonthYear}</span>
+                    <button className="btn btn-icon btn-ghost"><ChevronRight size={20} /></button>
+                </div>
                 <div className="dates-grid">
                     {dates.map(d => (
-                        <button key={d.day} className={`date-btn ${selectedDate === d.day ? 'active' : ''}`} onClick={() => setSelectedDate(d.day)}>
+                        <button
+                            key={d.fullDate}
+                            className={`date-btn ${selectedDate === d.fullDate ? 'active' : ''}`}
+                            onClick={() => setSelectedDate(d.fullDate)}
+                        >
                             <span className="weekday">{d.weekday}</span>
                             <span className="day">{d.day}</span>
                         </button>
@@ -46,7 +83,14 @@ const Schedule = () => {
 
             <div className="nav-buttons">
                 <Link to="/customer/book-service" className="btn btn-secondary">Back</Link>
-                <Link to="/customer/address" className="btn btn-primary">Continue</Link>
+                <Link
+                    to="/customer/address"
+                    state={{ service, provider, date: selectedDate, time: selectedTime }}
+                    className="btn btn-primary"
+                    disabled={!selectedDate}
+                >
+                    Continue
+                </Link>
             </div>
 
             <style>{`
